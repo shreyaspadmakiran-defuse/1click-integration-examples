@@ -102,12 +102,6 @@ Files needing a credential you lack explain what it unlocks and stop, rather tha
 | [02-error-handling.ts](10-production/02-error-handling.ts) | Retryable vs ambiguous vs terminal, against real failures |
 | [03-idempotency-and-recovery.ts](10-production/03-idempotency-and-recovery.ts) | Surviving an ambiguous submit; persist before funds move |
 
-### 11-testing: because there is no testnet
-
-| File | Teaches |
-| --- | --- |
-| [01-testing-your-integration.ts](11-testing/01-testing-your-integration.ts) | Eight offline assertions covering refunds, memo 404s, and double-submit protection |
-
 ### 12-operations: running it
 
 | File | Teaches |

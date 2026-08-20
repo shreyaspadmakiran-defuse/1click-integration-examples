@@ -9,19 +9,11 @@ This repo is code, not documentation. For concepts, parameters, and API referenc
 > **"There is no testnet version of NEAR Intents - use small amounts for test swaps."**
 > ([official quickstart](https://docs.near-intents.org/integration/distribution-channels/1click-api/quickstart/introduction))
 
-Every call in this repo hits mainnet. Every quote with `dry: false` allocates a real deposit address. That means you cannot write a CI test that performs a swap, cannot trigger a refund on demand, and cannot test a 5xx by waiting for one.
+Every call in this repo hits mainnet. Every quote with `dry: false` allocates a real deposit address.
 
-Use three layers instead:
+What protects you is `dry: true`. A dry quote prices a real swap against real solvers and commits to nothing: no deposit address, no funds, no limit on how often you call it. Build and verify everything against dry quotes, then make your first real swap a tiny one.
 
-| Layer | What | Cost | Covers |
-| --- | --- | --- | --- |
-| 1 | **Dry quotes** against mainnet (`dry: true`) | free, commits nothing | real pricing, request validation |
-| 2 | **[`MockOneClickClient`](src/testing/mock-client.ts)**, offline and deterministic | free | your state machine, refunds, failures, memo chains, retries |
-| 3 | **Small real swaps**, manually, last | real funds | solver pricing, deposit detection, settlement timing |
-
-Do not skip to layer 3. Most integration bugs are in your own orchestration, and layers 1 and 2 find those for free. Walk through it: [`examples/00-start-here/03-no-testnet.ts`](examples/00-start-here/03-no-testnet.ts), then [`examples/11-testing/`](examples/11-testing/).
-
-A dry quote and a real one differ in exactly one field. Default `dry` to `true` and make `dry: false` an explicit, reviewed decision.
+A dry quote and a real one differ in exactly one field, so default `dry` to `true` and make `dry: false` an explicit, reviewed decision in your code. Walk through it in [`examples/00-start-here/03-no-testnet.ts`](examples/00-start-here/03-no-testnet.ts).
 
 ## Prerequisites
 
@@ -198,7 +190,6 @@ npx ts-node examples/02-quotes/02-exact-output.ts
 | [08-intents-contract](examples/08-intents-contract/) | Reading `intents.near` directly: balances, nonces, simulation |
 | [09-notifications](examples/09-notifications/) | A webhook receiver that push cannot corrupt |
 | [10-production](examples/10-production/) | Preflight ordering, error classification, idempotency, persistence |
-| [11-testing](examples/11-testing/) | Testing your integration offline, since there is no testnet |
 | [12-operations](examples/12-operations/) | Troubleshooting by symptom, user-facing status, chain requirements |
 
 Everything is dry and read-only by default. Only [03-swaps/01-origin-chain.ts](examples/03-swaps/01-origin-chain.ts) can commit, and only with `EXECUTE=1`. Files needing a credential you lack explain what it unlocks and stop.

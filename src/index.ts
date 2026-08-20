@@ -35,10 +35,6 @@ export { verifyQuote } from './utils/verify-quote';
 export { withRetry, sleep } from './utils/retry';
 export { logger, setLogLevel } from './utils/logger';
 
-// For testing your integration offline. There is no NEAR Intents testnet,
-// so this is how you get an automated test suite.
-export { MockOneClickClient, MockOneClickOptions, MockSwap, MOCK_TOKENS } from './testing/mock-client';
-
 export { loadEnv, AppEnv } from './config/env';
 export * from './config/constants';
 export {

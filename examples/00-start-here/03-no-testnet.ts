@@ -4,125 +4,95 @@
  * The official guidance is explicit: "There is no testnet version of NEAR
  * Intents - use small amounts for test swaps."
  *
- * Every call in this repo hits mainnet. Every quote with dry:false allocates
- * a real deposit address. Every deposit you send is real money.
+ * Every call in this repo hits mainnet. Every quote with dry:false allocates a
+ * real deposit address. Every deposit you send is real money.
  *
- * That has consequences most teams discover late:
- *   - you cannot write a CI test that performs a swap
- *   - you cannot test the REFUNDED path by waiting for one to happen
- *   - you cannot test a 5xx, a timeout, or a rate limit on demand
- *   - a bug in a retry loop can spend real funds repeatedly
+ * WHAT PROTECTS YOU: dry:true
+ *   A dry quote prices a real swap against real solvers and commits to
+ *   NOTHING. No deposit address is allocated, no funds can move, and there is
+ *   no limit on how often you call it. Everything except the final commitment
+ *   can be built and verified this way.
  *
- * THE THREE-LAYER STRATEGY THAT WORKS
+ *   A dry quote and a real one differ in exactly ONE field. A stray dry:false
+ *   in a loop is a real, funded, repeated commitment. Default the flag to true
+ *   and make dry:false an explicit, reviewed decision in your code.
  *
- *   LAYER 1  Free, unlimited, safe: dry quotes against mainnet.
- *            dry:true prices a real swap and commits to NOTHING. No deposit
- *            address, no funds. Use it for pricing, validation, and to
- *            confirm your request shape is accepted.
+ * WHAT TO VERIFY WITH DRY QUOTES
+ *   - your request shape is accepted for every swap type you support
+ *   - your amount encoding is right (especially EXACT_OUTPUT decimals)
+ *   - your recipient and refundTo formats suit their chains
+ *   - your pricing, fee, and slippage display matches what the API returns
+ *   - your signature verification runs and passes
  *
- *   LAYER 2  Offline and deterministic: MockOneClickClient.
- *            This is your automated test suite. It implements the same
- *            interface with in-memory state, so you can test refunds,
- *            failures, memo chains, and timeouts. See 11-testing/.
- *
- *   LAYER 3  Small real swaps, done manually, at the end.
- *            A handful of minimum-size mainnet swaps to confirm the parts
- *            layers 1 and 2 cannot cover: real solver pricing, real deposit
- *            detection, real settlement timing.
- *
- * Do NOT skip to layer 3. Most integration bugs are in your own state
- * machine, and layers 1 and 2 find those for free.
+ * WHAT DRY QUOTES CANNOT COVER
+ *   Deposit detection, settlement timing, and the refund path. Those need a
+ *   real swap, which is why the first one should be tiny.
  *
  * AUTH  none required.
  * RUN   npx ts-node examples/00-start-here/03-no-testnet.ts
  */
-import { MockOneClickClient, OneClickClient, parseAmount, verifyQuote } from '../../src';
+import { OneClickClient, QuoteRequest, parseAmount, quoteRequestErrors, verifyQuote } from '../../src';
 
 async function main(): Promise<void> {
-  console.log('LAYER 1: dry quotes against mainnet. Free, safe, unlimited.\n');
+  const client = new OneClickClient({ jwt: process.env.ONE_CLICK_JWT });
 
-  const live = new OneClickClient();
-  const tokens = await live.getTokens();
+  const tokens = await client.getTokens();
   const wnear = tokens.find((t) => t.assetId === 'nep141:wrap.near');
   const usdt = tokens.find((t) => t.assetId === 'nep141:usdt.tether-token.near');
   if (!wnear || !usdt) throw new Error('Expected assets not listed');
 
-  const request = {
-    dry: true as const,
-    swapType: 'EXACT_INPUT' as const,
+  const request: QuoteRequest = {
+    dry: true, // the flag that keeps this free
+    swapType: 'EXACT_INPUT',
     slippageTolerance: 100,
     originAsset: wnear.assetId,
-    depositType: 'ORIGIN_CHAIN' as const,
+    depositType: 'ORIGIN_CHAIN',
     amount: parseAmount('1', wnear.decimals),
     destinationAsset: usdt.assetId,
     recipient: 'example.near',
-    recipientType: 'INTENTS' as const,
+    recipientType: 'INTENTS',
     refundTo: 'example.near',
-    refundType: 'ORIGIN_CHAIN' as const,
+    refundType: 'ORIGIN_CHAIN',
     deadline: new Date(Date.now() + 10 * 60_000).toISOString(),
   };
 
-  const dryQuote = await live.getQuote(request);
-  console.log(
-    `  real mainnet price: ${dryQuote.quote.amountInFormatted} wNEAR -> ${dryQuote.quote.amountOutFormatted} USDT`,
-  );
-  console.log(`  deposit address:    ${dryQuote.quote.depositAddress ?? 'NONE (nothing was committed)'}`);
-  console.log(`  signature verifies: ${verifyQuote(dryQuote)}`);
-  console.log('  This cost nothing and cannot lose funds. Use it freely.\n');
+  const quote = await client.getQuote(request);
 
-  console.log('LAYER 2: MockOneClickClient. Offline, deterministic, testable.\n');
+  console.log('A dry quote against mainnet:');
+  console.log(`  real price:         ${quote.quote.amountInFormatted} wNEAR -> ${quote.quote.amountOutFormatted} USDT`);
+  console.log(`  signature verifies: ${verifyQuote(quote)}`);
+  console.log(`  deposit address:    ${quote.quote.depositAddress ?? 'NONE, because nothing was committed'}`);
+  console.log('\nReal solvers, real pricing, zero risk. Call it as often as you like.\n');
 
-  // The happy path.
-  const mock = new MockOneClickClient();
-  const mockQuote = await mock.getQuote({ ...request, dry: false });
-  console.log(`  mock deposit address: ${mockQuote.quote.depositAddress}`);
+  // Validation is local, so a malformed request never costs a round trip and
+  // can never reach a dry:false call by accident.
+  console.log('Local validation catches structural mistakes before any call:');
+  const bad = quoteRequestErrors({ ...request, swapType: 'ANY_INPUT' });
+  for (const problem of bad) console.log(`  ${problem}`);
 
-  let status = await mock.getStatus(mockQuote.quote.depositAddress as string);
-  const seen = [status.status];
-  while (!['SUCCESS', 'REFUNDED', 'FAILED'].includes(status.status)) {
-    status = await mock.getStatus(mockQuote.quote.depositAddress as string);
-    seen.push(status.status);
-  }
-  console.log(`  status progression:   ${seen.join(' -> ')}`);
+  console.log('\nBefore your FIRST real swap, confirm all of these:');
+  console.log('  - refundTo is an address YOU control, on the refund chain');
+  console.log('  - you persist depositAddress (and depositMemo) BEFORE sending funds');
+  console.log('  - you handle REFUNDED and FAILED, not only SUCCESS');
+  console.log('  - your retry logic cannot resend a deposit or re-quote with dry:false');
+  console.log('  - your poll loop has a timeout');
 
-  // The refund path, which you cannot trigger on demand in production.
-  const refunding = new MockOneClickClient({
-    statusSequence: ['PENDING_DEPOSIT', 'INCOMPLETE_DEPOSIT', 'REFUNDED'],
-  });
-  const refundQuote = await refunding.getQuote({ ...request, dry: false });
-  const address = refundQuote.quote.depositAddress as string;
-  let refundStatus = await refunding.getStatus(address);
-  while (refundStatus.status !== 'REFUNDED') refundStatus = await refunding.getStatus(address);
-  console.log(
-    `  refund path tested:   ${refundStatus.status}, ${refundStatus.swapDetails?.refundedAmountFormatted} returned`,
-  );
-
-  // A server error, on demand.
-  const failing = new MockOneClickClient();
-  failing.failNext('getQuote');
-  try {
-    await failing.getQuote(request);
-  } catch (error) {
-    console.log(`  injected failure:     ${error instanceof Error ? error.message.slice(0, 60) : error}`);
-  }
-  console.log('  None of that touched the network or spent anything.\n');
-
-  console.log('LAYER 3: small real swaps, manually, last.\n');
+  // Sizing the first real swap. Small enough to be a rounding error if it goes
+  // wrong, large enough to clear whatever minimum the route enforces.
   const oneCent = (0.01 / wnear.price).toFixed(6);
+  console.log(`\nSizing a first real swap:`);
   console.log(`  wNEAR is about $${wnear.price}, so ~$0.01 is roughly ${oneCent} wNEAR`);
   console.log(`  = ${parseAmount(oneCent, wnear.decimals)} in smallest units`);
-  console.log('  Start near the chain minimum. If it is too small, the API rejects the quote,');
-  console.log('  which is itself a safe way to discover the floor.');
-  console.log('\n  Before your first real swap, confirm:');
-  console.log('    - refundTo is an address YOU control on the right chain');
-  console.log('    - you persist depositAddress BEFORE sending funds');
-  console.log('    - you handle REFUNDED, not just SUCCESS');
-  console.log('    - your retry logic cannot resend a deposit');
+  console.log('  Minimums are not published. Quote your intended amount with dry:true first:');
+  console.log('  if it is below the route minimum the quote is rejected, which costs nothing.');
 
-  console.log('\nOne more warning specific to having no testnet:');
-  console.log('  A dry quote and a real quote differ in exactly one field: `dry`.');
-  console.log('  A stray dry:false in a loop is a real, funded, repeated commitment.');
-  console.log('  Default that flag to true and make dry:false an explicit, reviewed decision.');
+  const tiny = await client
+    .getQuote({ ...request, amount: parseAmount(oneCent, wnear.decimals) })
+    .then((q) => `accepted, would return ${q.quote.amountOutFormatted} USDT`)
+    .catch((error) => `rejected: ${error instanceof Error ? error.message.slice(0, 100) : error}`);
+  console.log(`  ${oneCent} wNEAR -> ${tiny}`);
+
+  console.log('\nOnly once a tiny real swap settles end to end should you raise the amount.');
 }
 
 main().catch((error) => {

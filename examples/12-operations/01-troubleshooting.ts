@@ -90,7 +90,6 @@ const CATALOG: Symptom[] = [
   {
     symptom: 'Quote signature verification fails',
     causes: [
-      'You are verifying a mock quote. MockOneClickClient uses a placeholder signature on purpose. Do not disable verification to make the test pass.',
       'The response was modified in transit or by a proxy. Treat this as fatal and do NOT use the deposit address.',
       'You mutated the quote object before verifying. Verify the response exactly as received.',
     ],
