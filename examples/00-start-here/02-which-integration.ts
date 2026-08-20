@@ -126,8 +126,7 @@ async function main(): Promise<void> {
     console.log(`  refundable:     ${rule.refundable}`);
     console.log(`  reaches SUCCESS: ${rule.settlesToTerminalStatus}`);
   }
-  console.log('\nFLEX_INPUT cannot use CONFIDENTIAL_INTENTS.');
-  console.log('ANY_INPUT cannot use ORIGIN_CHAIN, and never reaches a terminal status.');
+  console.log('\nANY_INPUT cannot use ORIGIN_CHAIN, and never reaches a terminal status.');
   console.log('\nvalidateQuoteRequest() checks all of this locally, before any network call.');
 }
 

@@ -5,7 +5,6 @@
  *   - For confidential balances this is the REQUIRED path, not a speed
  *     optimization. There is no RPC route into a confidential balance, so an
  *     on-chain deposit cannot reach one.
- *   - FLEX_INPUT is not supported. The other three swap types are.
  *   - `confidentiality` selects the level: public | basic | advanced.
  *   - recipientType and refundType can independently be CONFIDENTIAL_INTENTS,
  *     so you can move from a public balance into a confidential one, or back.
@@ -43,12 +42,12 @@ async function main(): Promise<void> {
     apiKey: process.env.ONE_CLICK_API_KEY,
   });
 
-  // Which swap types accept confidential deposits at all.
-  console.log('CONFIDENTIAL_INTENTS support by swap type:');
-  for (const swapType of Object.keys(SWAP_TYPE_RULES) as SwapType[]) {
-    const supported = ruleFor(swapType).depositTypes.includes('CONFIDENTIAL_INTENTS');
-    console.log(`  ${swapType.padEnd(13)} ${supported ? 'yes' : 'no'}`);
-  }
+  // Every swap type accepts confidential deposits, so the swap type is not
+  // the constraint here. The credentials are.
+  const supported = (Object.keys(SWAP_TYPE_RULES) as SwapType[]).filter((swapType) =>
+    ruleFor(swapType).depositTypes.includes('CONFIDENTIAL_INTENTS'),
+  );
+  console.log(`swap types accepting CONFIDENTIAL_INTENTS: ${supported.join(', ')}`);
 
   const tokens = await client.getTokens();
   const wnear = tokens.find((t) => t.assetId === 'nep141:wrap.near');

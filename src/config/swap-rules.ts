@@ -58,8 +58,7 @@ const RULES = {
   },
   FLEX_INPUT: {
     amountUnit: 'ORIGIN',
-    // CONFIDENTIAL_INTENTS is not supported for FLEX_INPUT.
-    depositTypes: ['ORIGIN_CHAIN', 'INTENTS'],
+    depositTypes: ['ORIGIN_CHAIN', 'INTENTS', 'CONFIDENTIAL_INTENTS'],
     fundingFloor: 'minAmountIn',
     payoutFloor: 'minAmountOut',
     settlesToTerminalStatus: true,

@@ -13,20 +13,18 @@
  *   amount        ORIGIN units, but a reference point rather than a promise
  *   minAmountIn   the real floor. Anything at or above this swaps.
  *   minAmountOut  the payout floor, since the input can vary too
- *   depositType   ORIGIN_CHAIN or INTENTS ONLY.
- *                 CONFIDENTIAL_INTENTS is NOT supported for this swap type.
+ *   depositType   all three are accepted.
  *
  * Both floors matter here, unlike the EXACT types where one side is pinned.
  *
  * BEST PRACTICE
- *   Validate the swapType/depositType pair locally before calling. The API
- *   would reject it anyway, but failing in your own process is faster and
- *   gives a better message.
+ *   Compare deposits against minAmountIn, not amountIn. Treating the quoted
+ *   amount as the minimum rejects deposits the API would happily swap.
  *
  * AUTH  none required.
  * RUN   npx ts-node examples/02-quotes/03-flex-input.ts
  */
-import { OneClickClient, QuoteRequest, formatAmount, parseAmount, quoteRequestErrors, ruleFor } from '../../src';
+import { OneClickClient, QuoteRequest, formatAmount, parseAmount, ruleFor } from '../../src';
 
 async function main(): Promise<void> {
   const client = new OneClickClient({ jwt: process.env.ONE_CLICK_JWT });
@@ -71,10 +69,7 @@ async function main(): Promise<void> {
   console.log(`FLEX_INPUT accepts anything from  ${quote.quote.minAmountIn}`);
   console.log('  FLEX_INPUT accepts the gap between those two numbers; EXACT_INPUT refunds it.');
 
-  // The unsupported pair, checked locally.
   console.log(`\nFLEX_INPUT supports depositType: ${ruleFor('FLEX_INPUT').depositTypes.join(', ')}`);
-  const errors = quoteRequestErrors({ ...request, depositType: 'CONFIDENTIAL_INTENTS' });
-  console.log(`Validating CONFIDENTIAL_INTENTS locally: ${errors[0]}`);
 }
 
 main().catch((error) => {

@@ -81,7 +81,7 @@ The matrix lives in [src/config/swap-rules.ts](src/config/swap-rules.ts) as data
 | --- | --- | --- | --- | --- | --- |
 | `EXACT_INPUT` | origin units | all three | `amountIn` | `minAmountOut` | yes |
 | `EXACT_OUTPUT` | **destination units** | all three | `minAmountIn` | `amountOut` | yes |
-| `FLEX_INPUT` | origin units | not `CONFIDENTIAL_INTENTS` | `minAmountIn` | `minAmountOut` | yes |
+| `FLEX_INPUT` | origin units | all three | `minAmountIn` | `minAmountOut` | yes |
 | `ANY_INPUT` | ignored, always `"0"` | `INTENTS`, `CONFIDENTIAL_INTENTS` | n/a | n/a | **no** |
 
 Three consequences:
@@ -109,7 +109,7 @@ if (problems.length) throw new Error(problems.join('; '));
 | `POST /v0/generate-intent` | Partner **`X-API-Key`** |
 | `POST /v0/submit-intent` | Partner **`X-API-Key`**. The user's authorization here is the wallet signature inside `signedData`, not a token. |
 
-A confidential swap therefore needs both credentials, at different steps. A public `INTENTS` swap needs only the partner key. `FLEX_INPUT` does not support `CONFIDENTIAL_INTENTS` at all, and the validator rejects that pair locally.
+A confidential swap therefore needs both credentials, at different steps. A public `INTENTS` swap needs only the partner key.
 
 Request a level with `confidentiality: 'public' | 'basic' | 'advanced'` on the quote, or `--confidentiality` on the CLI. Worked through in [examples/03-swaps/03-confidential.ts](examples/03-swaps/03-confidential.ts).
 

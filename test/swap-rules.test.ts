@@ -48,14 +48,10 @@ describe('amount denomination', () => {
 });
 
 describe('depositType compatibility', () => {
-  it('rejects FLEX_INPUT over CONFIDENTIAL_INTENTS', () => {
-    const errors = quoteRequestErrors(request({ swapType: 'FLEX_INPUT', depositType: 'CONFIDENTIAL_INTENTS' }));
-    expect(errors.join(' ')).toContain('not supported for FLEX_INPUT');
-  });
-
-  it('accepts FLEX_INPUT over ORIGIN_CHAIN and INTENTS', () => {
-    expect(quoteRequestErrors(request({ swapType: 'FLEX_INPUT', depositType: 'ORIGIN_CHAIN' }))).toHaveLength(0);
-    expect(quoteRequestErrors(request({ swapType: 'FLEX_INPUT', depositType: 'INTENTS' }))).toHaveLength(0);
+  it('accepts FLEX_INPUT over every depositType', () => {
+    for (const depositType of ['ORIGIN_CHAIN', 'INTENTS', 'CONFIDENTIAL_INTENTS'] as const) {
+      expect(quoteRequestErrors(request({ swapType: 'FLEX_INPUT', depositType }))).toHaveLength(0);
+    }
   });
 
   it('rejects ANY_INPUT over ORIGIN_CHAIN, since there is no on-chain deposit path', () => {
@@ -65,9 +61,9 @@ describe('depositType compatibility', () => {
     expect(errors.join(' ')).toContain('not supported for ANY_INPUT');
   });
 
-  it('allows CONFIDENTIAL_INTENTS for every swap type except FLEX_INPUT', () => {
-    for (const [swapType, rule] of Object.entries(SWAP_TYPE_RULES)) {
-      expect(rule.depositTypes.includes('CONFIDENTIAL_INTENTS')).toBe(swapType !== 'FLEX_INPUT');
+  it('allows CONFIDENTIAL_INTENTS for every swap type', () => {
+    for (const rule of Object.values(SWAP_TYPE_RULES)) {
+      expect(rule.depositTypes).toContain('CONFIDENTIAL_INTENTS');
     }
   });
 });

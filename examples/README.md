@@ -37,7 +37,7 @@ Files needing a credential you lack explain what it unlocks and stop, rather tha
 | --- | --- | --- |
 | [01-exact-input.ts](02-quotes/01-exact-input.ts) | `EXACT_INPUT` | You fix the input; slippage moves the output; floor is `minAmountOut` |
 | [02-exact-output.ts](02-quotes/02-exact-output.ts) | `EXACT_OUTPUT` | `amount` is in **destination** units; refund threshold is `minAmountIn` |
-| [03-flex-input.ts](02-quotes/03-flex-input.ts) | `FLEX_INPUT` | A band, not a number; no `CONFIDENTIAL_INTENTS` |
+| [03-flex-input.ts](02-quotes/03-flex-input.ts) | `FLEX_INPUT` | A band, not a number; both floors matter |
 | [04-any-input.ts](02-quotes/04-any-input.ts) | `ANY_INPUT` | Fixed `originAsset`/`amount`; no rate, no refunds, never terminal |
 | [05-routing-types.ts](02-quotes/05-routing-types.ts) | `depositType` / `recipientType` / `refundType` | `recipient` must be valid for `recipientType` |
 | [06-app-fees.ts](02-quotes/06-app-fees.ts) | `appFees`, `referral` | 500 bps cap, 50/50 revenue share, and the fee lands on a different side per swap type |

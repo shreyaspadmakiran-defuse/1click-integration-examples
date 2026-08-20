@@ -42,9 +42,10 @@ describe('buildQuoteRequest', () => {
   });
 
   it('refuses to build a request the matrix rejects', () => {
+    // ANY_INPUT has no on-chain deposit path.
     expect(() =>
-      buildQuoteRequest({ ...base, swapType: 'FLEX_INPUT', depositType: 'CONFIDENTIAL_INTENTS', amount: '1000' }),
-    ).toThrow(/not supported for FLEX_INPUT/);
+      buildQuoteRequest({ ...base, swapType: 'ANY_INPUT', depositType: 'ORIGIN_CHAIN', amount: '0' }),
+    ).toThrow(/not supported for ANY_INPUT/);
   });
 
   it('defaults refunds back to where the deposit came from', () => {
